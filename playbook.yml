@@ -139,6 +139,29 @@
               - gcc-c++
               - make
               - amazon-cloudwatch-agent
+              - yum-utils
+              - shadow-utils
+            state: present
+
+        - name: Check if hashicorp repo exists
+          stat: 
+            path: /etc/yum.repos.d/hashicorp.repo
+          register: hashicorp_repo
+
+        # add hashicorp to yum repos
+        # for some reason, yum_repository adds the repo, 
+        # but yum install terraform doesn't work
+        - name: Add hashicorp repository
+          become: true
+          command: |
+            yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+          when: not hashicorp_repo.stat.exists
+
+        # install terraform
+        - name: Install Terraform
+          become: true
+          yum:
+            name: terraform
             state: present
 
         - name: Copy CloudWatch config
@@ -149,14 +172,16 @@
             owner: root
             group: root
             mode: 0644
+          register: cw_config
 
         - name: Start CloudWatch agent
           become: true
-          shell: |
+          command: |
             /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
+          when: cw_config.changed
 
         - name: Install Node.js via nvm + enable Yarn via corepack
-          shell: |
+          command: |
             curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
             source ~/.bashrc
             nvm install --lts
