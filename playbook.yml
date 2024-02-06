@@ -143,19 +143,14 @@
               - shadow-utils
             state: present
 
-        - name: Check if hashicorp repo exists
-          stat: 
-            path: /etc/yum.repos.d/hashicorp.repo
-          register: hashicorp_repo
-
         # add hashicorp to yum repos
         # for some reason, yum_repository adds the repo, 
-        # but yum install terraform doesn't work
+        # but yum install terraform won't work
         - name: Add hashicorp repository
           become: true
-          command: |
-            yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
-          when: not hashicorp_repo.stat.exists
+          command: 
+            cmd: yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+            creates: /etc/yum.repos.d/hashicorp.repo
 
         # install terraform
         - name: Install Terraform
@@ -176,14 +171,15 @@
 
         - name: Start CloudWatch agent
           become: true
-          command: |
-            /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
+          command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
           when: cw_config.changed
 
         - name: Install Node.js via nvm + enable Yarn via corepack
-          command: |
-            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-            source ~/.bashrc
-            nvm install --lts
-            nvm use --lts
-            corepack enable
+          shell:
+            cmd: |
+              curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+              source ~/.bashrc
+              nvm install --lts
+              nvm use --lts
+              corepack enable
+            creates: /home/ec2-user/.nvm/alias
