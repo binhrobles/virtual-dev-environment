@@ -1,0 +1,149 @@
+---
+
+- hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    region: us-east-1
+    instance_type: t4g.small
+    image: ami-07ce5684ee3b5482c # ripped from the AWS console
+    architecture: arm
+    security_group: vdev
+    key_name: vdev
+    instance_name: vdev-instance
+    volume_name: vdev-volume
+
+  tasks:
+    - name: Provision vdev environment
+      # Require the 'provision' tag to provision the env
+      tags: ['never', 'provision']
+      block:
+
+        - name: Create security group
+          tags: ['never', 'provision', 'sg']
+          amazon.aws.ec2_security_group:
+            name: "{{ security_group }}"
+            description: SG for virtual dev environment
+            region: "{{ region }}"
+            rules:
+              - proto: tcp
+                ports:
+                  - 22
+                  - 3000
+                cidr_ip: 0.0.0.0/0
+                rule_desc: allow all on ssh port
+
+        - name: Create key pair
+          amazon.aws.ec2_key:
+            name: "{{ key_name }}"
+            region: "{{ region }}"
+            key_material: "{{ item }}"
+          with_file: /home/binhrobles/.ssh/vdev.pub
+
+        - name: "Create a role and attach a managed policy called 'vdev-instance-profile'"
+          community.aws.iam_role:
+            name: vdev-instance-profile
+            assume_role_policy_document: "{{ lookup('file','iam_instance_trust_policy.json') }}"
+            managed_policies:
+              - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+
+        - name: Start an instance with a public IP address
+          amazon.aws.ec2_instance:
+            name: "{{ instance_name }}"
+            key_name: "{{ key_name }}"
+            instance_type: "{{ instance_type }}"
+            security_group: "{{ security_group }}"
+            region: "{{ region }}"
+            network:
+              assign_public_ip: true
+            image_id: "{{ image }}"
+          register: ec2
+
+        - name: Add instance to host group
+          add_host:
+            name: "{{ ec2.instances[0].public_dns_name }}"
+            groups: vdev
+            ansible_ssh_private_key_file: /home/binhrobles/.ssh/vdev.pem
+            ansible_user: ec2-user
+        
+          # some idempotency issues here
+        - name: Create / Attach EBS volume
+          ignore_errors: true
+          amazon.aws.ec2_vol:
+            instance: "{{ ec2.instances[0].instance_id }}"
+            name: "{{ volume_name }}"
+            device_name: /dev/sda1
+            volume_type: gp3
+            volume_size: 20
+            delete_on_termination: false
+
+        # TODO: set up auto shutdown
+
+        - name: Instance info
+          debug:
+            msg: "ID: {{ ec2.instances[0].instance_id }} - State: {{ ec2.instances[0].state.name }} - Public DNS: {{ ec2.instances[0].public_dns_name }}"
+
+    - name: Stop vdev instance
+      tags: ['never', 'stop']
+      amazon.aws.ec2_instance:
+        name: vdev-instance
+        state: stopped
+    
+    - name: Start vdev instance
+      tags: ['never', 'start']
+      amazon.aws.ec2_instance:
+        name: vdev-instance
+        state: running
+
+    - name: Nuke vdev environment completely
+      # Require the 'nuke' tag to nuke the env
+      tags: ['never', 'nuke']
+      block:
+
+        - name: Kill vdev instance
+          amazon.aws.ec2_instance:
+            name: vdev-instance
+            state: absent
+
+        - name: Destroy security group
+          amazon.aws.ec2_security_group:
+            name: "{{ security_group }}"
+            state: absent
+
+        - name: Destroy key pair
+          amazon.aws.ec2_key:
+            name: "{{ key_name }}"
+            region: "{{ region }}"
+            state: absent
+
+        - name: Destroy EBS volume
+          amazon.aws.ec2_vol:
+            name: vdev-volume
+            state: absent
+
+- hosts: tag_Name_vdev_instance
+  gather_facts: false
+
+  tasks:
+    - name: Set up dev environment
+      tags: ['never', 'provision', 'configure']
+      block:
+
+        - name: Install yum dependencies
+          become: true
+          yum:
+            name:
+              - git
+              - gcc-c++
+              - make
+              - amazon-cloudwatch-agent
+            state: present
+
+        - name: Install Node.js via nvm + enable Yarn via corepack
+          shell: |
+            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+            source ~/.bashrc
+            nvm install --lts
+            nvm use --lts
+            corepack enable
