@@ -79,6 +79,7 @@
             delete_on_termination: false
 
         # TODO: set up auto shutdown
+        # create ssh key / upload pub to github?
 
         - name: Instance info
           debug:
