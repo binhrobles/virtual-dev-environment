@@ -141,6 +141,7 @@
               - amazon-cloudwatch-agent
               - yum-utils
               - shadow-utils
+              - docker
             state: present
 
         # add hashicorp to yum repos
