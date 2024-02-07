@@ -12,7 +12,6 @@
     security_group: vdev
     key_name: vdev
     instance_name: vdev-instance
-    volume_name: vdev-volume
 
   tasks:
     - name: Provision vdev environment
@@ -69,19 +68,7 @@
             ansible_ssh_private_key_file: /home/binhrobles/.ssh/vdev.pem
             ansible_user: ec2-user
         
-          # some idempotency issues here
-        - name: Create / Attach EBS volume
-          ignore_errors: true
-          amazon.aws.ec2_vol:
-            instance: "{{ ec2.instances[0].instance_id }}"
-            name: "{{ volume_name }}"
-            device_name: /dev/sda1
-            volume_type: gp3
-            volume_size: 20
-            delete_on_termination: false
-
         # TODO: set up auto shutdown
-        # create ssh key / upload pub to github?
 
         - name: Instance info
           debug:
@@ -118,11 +105,6 @@
           amazon.aws.ec2_key:
             name: "{{ key_name }}"
             region: "{{ region }}"
-            state: absent
-
-        - name: Destroy EBS volume
-          amazon.aws.ec2_vol:
-            name: vdev-volume
             state: absent
 
 - hosts: tag_Name_vdev_instance
