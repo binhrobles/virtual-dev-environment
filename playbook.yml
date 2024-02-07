@@ -31,8 +31,10 @@
                 ports:
                   - 22
                   - 3000
+                  - 5173
+                  - 8000
                 cidr_ip: 0.0.0.0/0
-                rule_desc: allow all on ssh port
+                rule_desc: allow all on ssh port, dev ports
 
         - name: Create key pair
           amazon.aws.ec2_key:
