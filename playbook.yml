@@ -12,6 +12,7 @@
     security_group: vdev
     key_name: vdev
     instance_name: vdev-instance
+    volume_name: vdev-volume
 
   tasks:
     - name: Provision vdev environment
@@ -58,6 +59,18 @@
             region: "{{ region }}"
             image_id: "{{ image }}"
             wait: true
+          register: ec2
+
+          # some idempotency issues here
+        - name: Create / Attach EBS volume
+          ignore_errors: true
+          amazon.aws.ec2_vol:
+            instance: "{{ ec2.instances[0].instance_id }}"
+            name: "{{ volume_name }}"
+            device_name: /dev/sda1
+            volume_type: gp3
+            volume_size: 30
+            delete_on_termination: true
 
         - name: Associate static Elastic IP
           amazon.aws.ec2_eip:
