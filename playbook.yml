@@ -51,6 +51,14 @@
             managed_policies:
               - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
 
+        - name: Add ec2:DescribeTags to instance profile
+          amazon.aws.iam_policy:
+            iam_type: role
+            iam_name: "{{ instance_profile_name }}"
+            policy_name: vdev-ec2-describe-tags
+            policy_json: "{{ lookup('file','describe_tags_inline_policy.json') }}"
+            state: present
+
         - name: Start an instance
           amazon.aws.ec2_instance:
             name: "{{ instance_name }}"
