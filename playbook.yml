@@ -201,16 +201,18 @@
           command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
           when: cw_config.changed
 
+          # might get flaky
         - name: mount file system
           become: true
           shell:
             cmd: |
               mkfs -t xfs /dev/sdf
               mkdir /workspace
-              mount /dev/sdf /workspace
+              echo "$(blkid -o export /dev/sdf | grep ^UUID=) /workspace xfs defaults,noatime" >> /etc/fstab
+              mount -a
               chmod 700 /workspace
-              chown ec2-user:ec2-user /workspace
               ln -s /workspace .
+              chown ec2-user:ec2-user /workspace
             creates: /workspace
 
         - name: Install Node.js via nvm + enable Yarn via corepack
