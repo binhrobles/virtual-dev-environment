@@ -13,6 +13,7 @@
     key_name: vdev
     instance_name: vdev-instance
     volume_name: vdev-volume
+    instance_profile_name: vdev-instance-profile
 
   tasks:
     - name: Provision vdev environment
@@ -31,7 +32,7 @@
                 ports:
                   - 22
                   - 3000
-                  - 5173
+                  - 3333
                   - 8000
                 cidr_ip: 0.0.0.0/0
                 rule_desc: allow all on ssh port, dev ports
@@ -43,9 +44,9 @@
             key_material: "{{ item }}"
           with_file: /home/binhrobles/.ssh/vdev.pub
 
-        - name: "Create a role and attach a managed policy called 'vdev-instance-profile'"
+        - name: Create instance profile role and attach a managed policy
           community.aws.iam_role:
-            name: vdev-instance-profile
+            name: "{{ instance_profile_name }}"
             assume_role_policy_document: "{{ lookup('file','iam_instance_trust_policy.json') }}"
             managed_policies:
               - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
@@ -58,6 +59,7 @@
             security_group: "{{ security_group }}"
             region: "{{ region }}"
             image_id: "{{ image }}"
+            iam_instance_profile: "{{ instance_profile_name }}"
             wait: true
           register: ec2
 
@@ -121,6 +123,12 @@
             name: vdev-instance
             state: absent
 
+        - name: Destroy instance profile
+          community.aws.iam_role:
+            name: "{{ instance_profile_name }}"
+            assume_role_policy_document: "{{ lookup('file','iam_instance_trust_policy.json') }}"
+            state: absent
+
         - name: Destroy security group
           amazon.aws.ec2_security_group:
             name: "{{ security_group }}"
@@ -154,6 +162,14 @@
               - docker
             state: present
 
+        - name: Copy tmux config
+          copy:
+            src: tmux.conf
+            dest: /home/ec2-user/.tmux.conf
+            owner: ec2-user
+            group: ec2-user
+            mode: 0644
+
         # add hashicorp to yum repos
         # for some reason, yum_repository adds the repo, 
         # but yum install terraform won't work
@@ -175,8 +191,8 @@
           copy:
             src: amazon-cloudwatch-agent.json
             dest: /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
-            owner: root
-            group: root
+            owner: cwagent
+            group: cwagent
             mode: 0644
           register: cw_config
 
