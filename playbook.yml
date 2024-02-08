@@ -6,7 +6,7 @@
 
   vars:
     region: us-east-1
-    instance_type: t4g.small
+    instance_type: t4g.medium
     image: ami-07ce5684ee3b5482c # ripped from the AWS console
     architecture: arm
     security_group: vdev
