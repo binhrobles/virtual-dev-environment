@@ -49,7 +49,7 @@
             managed_policies:
               - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
 
-        - name: Start an instance with a public IP address
+        - name: Start an instance
           amazon.aws.ec2_instance:
             name: "{{ instance_name }}"
             key_name: "{{ key_name }}"
@@ -58,15 +58,18 @@
             region: "{{ region }}"
             image_id: "{{ image }}"
             wait: true
-          register: ec2
 
-        # assign static public ip
-        - name: Associate Elastic IP
+        - name: Associate static Elastic IP
           amazon.aws.ec2_eip:
             device_id: "{{ ec2.instances[0].instance_id }}"
-          register: eip
         
-        # TODO: set up auto shutdown
+        # TODO?: set up auto shutdown
+
+        - name: Get vdev facts
+          amazon.aws.ec2_instance_info:
+            filters:
+              "tag:Name": vdev-instance
+          register: ec2
 
         - name: Instance info
           debug:
@@ -88,6 +91,17 @@
       # Require the 'nuke' tag to nuke the env
       tags: ['never', 'nuke']
       block:
+
+        - name: Get vdev facts
+          amazon.aws.ec2_instance_info:
+            filters:
+              "tag:Name": vdev-instance
+          register: ec2
+
+        - name: Release Elastic IP
+          amazon.aws.ec2_eip:
+            device_id: "{{ ec2.instances[0].instance_id }}"
+            state: absent
 
         - name: Kill vdev instance
           amazon.aws.ec2_instance:
@@ -120,6 +134,7 @@
               - git
               - gcc-c++
               - make
+              - tmux
               - amazon-cloudwatch-agent
               - yum-utils
               - shadow-utils
