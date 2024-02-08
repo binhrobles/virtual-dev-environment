@@ -56,17 +56,15 @@
             instance_type: "{{ instance_type }}"
             security_group: "{{ security_group }}"
             region: "{{ region }}"
-            network:
-              assign_public_ip: true
             image_id: "{{ image }}"
+            wait: true
           register: ec2
 
-        - name: Add instance to host group
-          add_host:
-            name: "{{ ec2.instances[0].public_dns_name }}"
-            groups: vdev
-            ansible_ssh_private_key_file: /home/binhrobles/.ssh/vdev.pem
-            ansible_user: ec2-user
+        # assign static public ip
+        - name: Associate Elastic IP
+          amazon.aws.ec2_eip:
+            device_id: "{{ ec2.instances[0].instance_id }}"
+          register: eip
         
         # TODO: set up auto shutdown
 
@@ -112,7 +110,7 @@
 
   tasks:
     - name: Set up dev environment
-      tags: ['never', 'provision', 'configure']
+      tags: ['never', 'configure']
       block:
 
         - name: Install yum dependencies
