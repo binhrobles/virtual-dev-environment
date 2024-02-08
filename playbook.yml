@@ -63,20 +63,20 @@
             wait: true
           register: ec2
 
+        - name: Associate static Elastic IP
+          amazon.aws.ec2_eip:
+            device_id: "{{ ec2.instances[0].instance_id }}"
+
           # some idempotency issues here
         - name: Create / Attach EBS volume
           ignore_errors: true
           amazon.aws.ec2_vol:
             instance: "{{ ec2.instances[0].instance_id }}"
             name: "{{ volume_name }}"
-            device_name: /dev/sda1
+            device_name: /dev/sdf
             volume_type: gp3
             volume_size: 30
             delete_on_termination: true
-
-        - name: Associate static Elastic IP
-          amazon.aws.ec2_eip:
-            device_id: "{{ ec2.instances[0].instance_id }}"
         
         # TODO?: set up auto shutdown
 
@@ -200,6 +200,18 @@
           become: true
           command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
           when: cw_config.changed
+
+        - name: mount file system
+          become: true
+          shell:
+            cmd: |
+              mkfs -t xfs /dev/sdf
+              mkdir /workspace
+              mount /dev/sdf /workspace
+              chmod 700 /workspace
+              chown ec2-user:ec2-user /workspace
+              ln -s /workspace .
+            creates: /workspace
 
         - name: Install Node.js via nvm + enable Yarn via corepack
           shell:
