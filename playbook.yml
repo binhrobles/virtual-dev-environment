@@ -22,7 +22,7 @@
       block:
 
         - name: Create security group
-          tags: ['never', 'provision', 'sg']
+          tags: ['never', 'provision', 'update-sg']
           amazon.aws.ec2_security_group:
             name: "{{ security_group }}"
             description: SG for virtual dev environment
@@ -33,6 +33,7 @@
                   - 22
                   - 3000
                   - 3333
+                  - 5173  # remix port
                   - 8000
                   - 24678 # vite hmr port
                 cidr_ip: 0.0.0.0/0
