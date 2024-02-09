@@ -13,7 +13,7 @@
     key_name: vdev
     instance_name: vdev-instance
     volume_name: vdev-volume
-    instance_profile_name: vdev-instance-profile
+    instance_profile_name: vdev-instance-profile-manual # manually created, because ansible gets buggy w/ instance profiles
 
   tasks:
     - name: Provision vdev environment
@@ -43,21 +43,6 @@
             region: "{{ region }}"
             key_material: "{{ item }}"
           with_file: /home/binhrobles/.ssh/vdev.pub
-
-        - name: Create instance profile role and attach a managed policy
-          community.aws.iam_role:
-            name: "{{ instance_profile_name }}"
-            assume_role_policy_document: "{{ lookup('file','iam_instance_trust_policy.json') }}"
-            managed_policies:
-              - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
-
-        - name: Add ec2:DescribeTags to instance profile
-          amazon.aws.iam_policy:
-            iam_type: role
-            iam_name: "{{ instance_profile_name }}"
-            policy_name: vdev-ec2-describe-tags
-            policy_json: "{{ lookup('file','describe_tags_inline_policy.json') }}"
-            state: present
 
         - name: Start an instance
           amazon.aws.ec2_instance:
@@ -129,12 +114,6 @@
         - name: Kill vdev instance
           amazon.aws.ec2_instance:
             name: vdev-instance
-            state: absent
-
-        - name: Destroy instance profile
-          community.aws.iam_role:
-            name: "{{ instance_profile_name }}"
-            assume_role_policy_document: "{{ lookup('file','iam_instance_trust_policy.json') }}"
             state: absent
 
         - name: Destroy security group
