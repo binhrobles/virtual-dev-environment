@@ -149,15 +149,36 @@
               - yum-utils
               - shadow-utils
               - docker
+              - zsh
             state: present
 
-        - name: Copy tmux config
+        - name: install oh my zsh
+          shell:
+            cmd: |
+              sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+            creates: /home/ec2-user/.oh-my-zsh
+
+        - name: change default shell
+          become: true
+          shell: which zsh | lchsh ec2-user
+
+        - name: Copy some dotfiles
+          tags: ['update-dotfiles']
           copy:
-            src: tmux.conf
-            dest: /home/ec2-user/.tmux.conf
+            src: "{{ item.src }}"
+            dest: "{{ item.dest }}"
             owner: ec2-user
             group: ec2-user
-            mode: 0644
+            mode: preserve
+          loop:
+            - src: ~/.tmux.conf
+              dest: /home/ec2-user/.tmux.conf
+            - src: ~/.zshrc
+              dest: /home/ec2-user/.zshrc
+            - src: ~/.ssh/github
+              dest: /home/ec2-user/.ssh/github
+            - src: ~/.gitconfig
+              dest: /home/ec2-user/.gitconfig
 
         # add hashicorp to yum repos
         # for some reason, yum_repository adds the repo, 
