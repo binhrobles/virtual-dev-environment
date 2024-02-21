@@ -9,6 +9,10 @@ Just using an EBS-backed AMI atm -- should assume the dev machine can / will be 
 - AWS CLI access set up in a way that Ansible can assume it
 - An SSH key at `~/.ssh/vdev`
 
+## AWS Account Reqs
+- EC2 Instance Connect endpoint set up on the target VPC
+  - bypasses need to provision a public IP
+
 ## Usage
 ```bash
 # set up the local env
