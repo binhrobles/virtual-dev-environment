@@ -1,5 +1,5 @@
 # virtual-dev-environment
-Provisions an EC2 instance w/ a static public IP for use as a remote dev environment while I'm delaying buying a higher powered laptop than this chromebook. 
+Provisions an EC2 instance for use as a remote dev environment while I'm delaying buying a higher powered laptop than this chromebook. 
 
 Just using an EBS-backed AMI atm -- should assume the dev machine can / will be torn down regularly, so all work is pushed regularly into github.
 
@@ -17,4 +17,6 @@ python3 -m pip install requirements.txt
 
 # all interaction is done via tags
 ansible-playbook playbook.yml -t [provision|stop|start|nuke]
+
+# see example.ssh.config to continue w/ ssh
 ```
