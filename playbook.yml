@@ -72,18 +72,34 @@
             volume_type: gp3
             volume_size: 30
             delete_on_termination: true
-        
-        # TODO?: set up auto shutdown
 
         - name: Get vdev facts
           amazon.aws.ec2_instance_info:
             filters:
               "tag:Name": vdev-instance
-          register: ec2
+          register: ec2_info
+
+          # set up auto shutdown
+        - name: Auto stop if CPU usage is less than 3% for 15 minutes
+          ec2_metric_alarm:
+            state: present
+            region: us-east-1
+            name: "cpu-low"
+            metric: "CPUUtilization"
+            namespace: "AWS/EC2"
+            statistic: Average
+            comparison: "LessThanOrEqualToThreshold"
+            threshold: 3.0
+            period: 300
+            evaluation_periods: 3
+            unit: "Percent"
+            description: "This will alarm when vdev's cpu usage average is lower than 3% for 15 minutes "
+            dimensions: { 'InstanceId': "{{ ec2_info.instances[0].instance_id }}" }
+            alarm_actions: [ "arn:aws:automate:us-east-1:ec2:stop" ]
 
         - name: Instance info
           debug:
-            msg: "ID: {{ ec2.instances[0].instance_id }} - State: {{ ec2.instances[0].state.name }} - Public DNS: {{ ec2.instances[0].public_dns_name }}"
+            msg: "ID: {{ ec2_info.instances[0].instance_id }} - State: {{ ec2_info.instances[0].state.name }} - Public DNS: {{ ec2_info.instances[0].public_dns_name }}"
 
     - name: Stop vdev instance
       tags: ['never', 'stop']
