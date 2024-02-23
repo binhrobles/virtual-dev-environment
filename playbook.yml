@@ -81,7 +81,7 @@
           register: ec2_info
 
           # set up auto shutdown
-        - name: Auto stop if CPU usage is less than 3% for 30 minutes
+        - name: Auto stop if CPU usage is less than 3% for 45 minutes
           tags: ['alarm']
           ec2_metric_alarm:
             state: present
@@ -93,9 +93,9 @@
             comparison: "LessThanOrEqualToThreshold"
             threshold: 3.0
             period: 300
-            evaluation_periods: 6
+            evaluation_periods: 9
             unit: "Percent"
-            description: "This will alarm when vdev's cpu usage average is lower than 3% for 30 minutes "
+            description: "This will alarm when vdev's cpu usage average is lower than 3% for 45 minutes "
             dimensions: { 'InstanceId': "{{ ec2_info.instances[0].instance_id }}" }
             alarm_actions: [ "arn:aws:automate:us-east-1:ec2:stop" ]
 
