@@ -170,6 +170,21 @@
               - zsh
             state: present
 
+        - name: install autojump
+          shell:
+            cmd: |
+              git clone https://github.com/wting/autojump.git
+              pushd autojump; ./install.py
+            creates: /home/ec2-user/.autojump/bin/autojump
+
+        - name: install ngrok
+          become: true
+          shell:
+            cmd: |
+              wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz
+              sudo tar xvzf ./ngrok-v3-stable-linux-arm64.tgz -C /usr/local/bin
+            creates: /usr/local/bin/ngrok
+
         - name: install docker-compose
           become: true
           shell:
